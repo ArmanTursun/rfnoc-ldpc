@@ -1,0 +1,78 @@
+#
+# Copyright 2019 Ettus Research, a National Instruments Brand
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+cmake_minimum_required(VERSION 3.8)
+project(rfnoc-example CXX C)
+
+
+########################################################################
+# Setup install directories
+########################################################################
+
+# Add source files
+add_library(rfnoc-example_lib SHARED
+    lib/encoder_block_control.cpp
+    lib/polar_encoder_rfnoc.cpp
+    lib/polar_encoder_rfnoc_wrapper.cpp
+)
+
+# Add include directories
+target_include_directories(rfnoc-example_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib
+)
+
+
+set(CMAKE_INSTALL_LIBDIR /usr/local/lib)
+set(CMAKE_INSTALL_INCLUDEDIR /usr/local/include)
+
+# Install library and header files
+install(TARGETS rfnoc-example_lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rfnoc-example)
+
+file(GLOB RFNOC_EXAMPLE_HEADERS "include/*.h" "include/*.hpp")
+
+# Install all header files
+foreach(HEADER ${RFNOC_EXAMPLE_HEADERS})
+    get_filename_component(HEADER_NAME ${HEADER} NAME)
+    install(FILES ${HEADER} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rfnoc-example)
+endforeach()
+
+
+###########################################################################
+# Find UHD
+###########################################################################
+find_package(UHD)
+if(UHD_FOUND)
+    message(STATUS "Found UHD:")
+    include_directories(${UHD_INCLUDE_DIRS})
+    message(STATUS " * INCLUDES = ${UHD_INCLUDE_DIRS}")
+    link_directories(${UHD_LIBRARIES})
+    message(STATUS " * LIBS = ${UHD_LIBRARIES}")
+    find_program(_rfnoc_image_builder_exe
+        "rfnoc_image_builder"
+    )
+    if (_rfnoc_image_builder_exe)
+        message(STATUS
+            " * rfnoc_image_builder = ${_rfnoc_image_builder_exe}")
+    endif()
+else()
+    message(WARNING "UHD not found. Cannot build block controllers.")
+endif()
+
+
+########################################################################
+# Create uninstall target
+########################################################################
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+@ONLY)
+add_custom_target(uninstall
+    ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+)
+
